@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { FileText, Download, Calendar, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import { Download, Calendar, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,13 +13,7 @@ import {
 } from '@/components/ui/select';
 import { useSales, usePurchases, useExpenses, useProducts, formatCurrency, formatDate, getDateRange } from '@/hooks/useAccounting';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
-
-declare module 'jspdf' {
-  interface jsPDF {
-    autoTable: (options: any) => jsPDF;
-  }
-}
+import autoTable from 'jspdf-autotable';
 
 type ReportType = 'daily' | 'weekly' | 'monthly' | 'custom';
 
@@ -146,7 +140,7 @@ export default function Reports() {
       ['Net Profit', `${reportData.netProfit.toFixed(2)} EGP`],
     ];
 
-    doc.autoTable({
+    autoTable(doc, {
       startY: 50,
       head: [['Item', 'Amount']],
       body: summaryData,
@@ -170,7 +164,7 @@ export default function Reports() {
         `${s.profit.toFixed(2)}`,
       ]);
 
-      doc.autoTable({
+      autoTable(doc, {
         startY: 25,
         head: [['Date', 'Product', 'Qty', 'Price', 'Total', 'Profit']],
         body: salesTableData,
@@ -195,7 +189,7 @@ export default function Reports() {
         p.supplier || '-',
       ]);
 
-      doc.autoTable({
+      autoTable(doc, {
         startY: 25,
         head: [['Date', 'Product', 'Qty', 'Price', 'Total', 'Supplier']],
         body: purchasesTableData,
@@ -218,7 +212,7 @@ export default function Reports() {
         `${e.amount.toFixed(2)}`,
       ]);
 
-      doc.autoTable({
+      autoTable(doc, {
         startY: 25,
         head: [['Date', 'Description', 'Category', 'Amount']],
         body: expensesTableData,
@@ -233,16 +227,18 @@ export default function Reports() {
     doc.setFont('helvetica', 'bold');
     doc.text('Inventory Status', 14, 20);
 
-    const inventoryData = products.map(p => [
-      p.name,
-      p.stock.toString(),
-      p.unit,
-      `${p.buyPrice.toFixed(2)}`,
-      `${p.sellPrice.toFixed(2)}`,
-      `${(p.stock * p.buyPrice).toFixed(2)}`,
-    ]);
+    const inventoryData = products.length > 0 
+      ? products.map(p => [
+          p.name,
+          p.stock.toString(),
+          p.unit,
+          `${p.buyPrice.toFixed(2)}`,
+          `${p.sellPrice.toFixed(2)}`,
+          `${(p.stock * p.buyPrice).toFixed(2)}`,
+        ])
+      : [['No products', '-', '-', '-', '-', '-']];
 
-    doc.autoTable({
+    autoTable(doc, {
       startY: 25,
       head: [['Product', 'Stock', 'Unit', 'Buy Price', 'Sell Price', 'Value']],
       body: inventoryData,
