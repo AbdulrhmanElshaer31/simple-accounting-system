@@ -18,6 +18,9 @@ export interface Sale {
   profit: number;
   date: string;
   notes?: string;
+  customerId?: string;
+  customerName?: string;
+  paymentType: 'cash' | 'credit';
 }
 
 export interface Purchase {
@@ -29,7 +32,9 @@ export interface Purchase {
   totalPrice: number;
   date: string;
   supplier?: string;
+  supplierId?: string;
   notes?: string;
+  paymentType: 'cash' | 'credit';
 }
 
 export interface Expense {
@@ -37,6 +42,44 @@ export interface Expense {
   description: string;
   amount: number;
   category: string;
+  date: string;
+  notes?: string;
+}
+
+export interface Customer {
+  id: string;
+  name: string;
+  phone?: string;
+  address?: string;
+  totalDebt: number;
+  createdAt: string;
+  notes?: string;
+}
+
+export interface CustomerPayment {
+  id: string;
+  customerId: string;
+  customerName: string;
+  amount: number;
+  date: string;
+  notes?: string;
+}
+
+export interface Supplier {
+  id: string;
+  name: string;
+  phone?: string;
+  address?: string;
+  totalDebt: number;
+  createdAt: string;
+  notes?: string;
+}
+
+export interface SupplierPayment {
+  id: string;
+  supplierId: string;
+  supplierName: string;
+  amount: number;
   date: string;
   notes?: string;
 }

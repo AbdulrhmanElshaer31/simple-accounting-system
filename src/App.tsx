@@ -9,7 +9,10 @@ import Products from "./pages/Products";
 import Sales from "./pages/Sales";
 import Purchases from "./pages/Purchases";
 import Expenses from "./pages/Expenses";
+import Customers from "./pages/Customers";
+import Suppliers from "./pages/Suppliers";
 import Reports from "./pages/Reports";
+import Backup from "./pages/Backup";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,7 +30,10 @@ const App = () => (
             <Route path="/sales" element={<Sales />} />
             <Route path="/purchases" element={<Purchases />} />
             <Route path="/expenses" element={<Expenses />} />
+            <Route path="/customers" element={<Customers />} />
+            <Route path="/suppliers" element={<Suppliers />} />
             <Route path="/reports" element={<Reports />} />
+            <Route path="/backup" element={<Backup />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Layout>

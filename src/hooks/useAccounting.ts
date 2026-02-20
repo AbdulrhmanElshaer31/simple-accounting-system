@@ -1,5 +1,5 @@
 import { useLocalStorage } from './useLocalStorage';
-import { Product, Sale, Purchase, Expense, DailySummary } from '@/types/accounting';
+import { Product, Sale, Purchase, Expense, DailySummary, Customer, CustomerPayment, Supplier, SupplierPayment } from '@/types/accounting';
 
 export function useProducts() {
   return useLocalStorage<Product[]>('accounting_products', []);
@@ -15,6 +15,22 @@ export function usePurchases() {
 
 export function useExpenses() {
   return useLocalStorage<Expense[]>('accounting_expenses', []);
+}
+
+export function useCustomers() {
+  return useLocalStorage<Customer[]>('accounting_customers', []);
+}
+
+export function useCustomerPayments() {
+  return useLocalStorage<CustomerPayment[]>('accounting_customer_payments', []);
+}
+
+export function useSuppliers() {
+  return useLocalStorage<Supplier[]>('accounting_suppliers', []);
+}
+
+export function useSupplierPayments() {
+  return useLocalStorage<SupplierPayment[]>('accounting_supplier_payments', []);
 }
 
 export function generateId(): string {
@@ -69,4 +85,28 @@ export function getDateRange(startDate: string, endDate: string): string[] {
   }
   
   return dates;
+}
+
+export function getAllData() {
+  return {
+    products: JSON.parse(localStorage.getItem('accounting_products') || '[]'),
+    sales: JSON.parse(localStorage.getItem('accounting_sales') || '[]'),
+    purchases: JSON.parse(localStorage.getItem('accounting_purchases') || '[]'),
+    expenses: JSON.parse(localStorage.getItem('accounting_expenses') || '[]'),
+    customers: JSON.parse(localStorage.getItem('accounting_customers') || '[]'),
+    customerPayments: JSON.parse(localStorage.getItem('accounting_customer_payments') || '[]'),
+    suppliers: JSON.parse(localStorage.getItem('accounting_suppliers') || '[]'),
+    supplierPayments: JSON.parse(localStorage.getItem('accounting_supplier_payments') || '[]'),
+  };
+}
+
+export function restoreAllData(data: Record<string, unknown>) {
+  if (data.products) localStorage.setItem('accounting_products', JSON.stringify(data.products));
+  if (data.sales) localStorage.setItem('accounting_sales', JSON.stringify(data.sales));
+  if (data.purchases) localStorage.setItem('accounting_purchases', JSON.stringify(data.purchases));
+  if (data.expenses) localStorage.setItem('accounting_expenses', JSON.stringify(data.expenses));
+  if (data.customers) localStorage.setItem('accounting_customers', JSON.stringify(data.customers));
+  if (data.customerPayments) localStorage.setItem('accounting_customer_payments', JSON.stringify(data.customerPayments));
+  if (data.suppliers) localStorage.setItem('accounting_suppliers', JSON.stringify(data.suppliers));
+  if (data.supplierPayments) localStorage.setItem('accounting_supplier_payments', JSON.stringify(data.supplierPayments));
 }
