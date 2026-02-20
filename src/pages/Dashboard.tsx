@@ -1,13 +1,15 @@
 import { useMemo } from 'react';
-import { TrendingUp, TrendingDown, Package, DollarSign, ShoppingCart, Wallet } from 'lucide-react';
+import { TrendingUp, TrendingDown, Package, DollarSign, ShoppingCart, Wallet, Users, Truck } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useSales, usePurchases, useExpenses, useProducts, formatCurrency, formatDate } from '@/hooks/useAccounting';
+import { useSales, usePurchases, useExpenses, useProducts, useCustomers, useSuppliers, formatCurrency, formatDate } from '@/hooks/useAccounting';
 
 export default function Dashboard() {
   const [sales] = useSales();
   const [purchases] = usePurchases();
   const [expenses] = useExpenses();
   const [products] = useProducts();
+  const [customers] = useCustomers();
+  const [suppliers] = useSuppliers();
 
   const today = formatDate(new Date());
   
@@ -28,27 +30,25 @@ export default function Dashboard() {
 
     const lowStockProducts = products.filter(p => p.stock < 10);
     const totalInventoryValue = products.reduce((sum, p) => sum + (p.stock * p.buyPrice), 0);
+    const totalCustomerDebts = customers.reduce((sum, c) => sum + c.totalDebt, 0);
+    const totalSupplierDebts = suppliers.reduce((sum, s) => sum + s.totalDebt, 0);
 
     return {
-      todaySales: totalSalesToday,
-      todayPurchases: totalPurchasesToday,
-      todayExpenses: totalExpensesToday,
-      todayProfit: totalProfitToday,
-      totalSales: totalSalesAll,
-      totalPurchases: totalPurchasesAll,
-      totalExpenses: totalExpensesAll,
-      totalProfit: totalProfitAll,
-      productsCount: products.length,
-      lowStockCount: lowStockProducts.length,
-      inventoryValue: totalInventoryValue,
-      salesCountToday: todaySales.length,
+      todaySales: totalSalesToday, todayPurchases: totalPurchasesToday,
+      todayExpenses: totalExpensesToday, todayProfit: totalProfitToday,
+      totalSales: totalSalesAll, totalPurchases: totalPurchasesAll,
+      totalExpenses: totalExpensesAll, totalProfit: totalProfitAll,
+      productsCount: products.length, lowStockCount: lowStockProducts.length,
+      inventoryValue: totalInventoryValue, salesCountToday: todaySales.length,
+      totalCustomerDebts, totalSupplierDebts,
+      customersCount: customers.length, suppliersCount: suppliers.length,
     };
-  }, [sales, purchases, expenses, products, today]);
+  }, [sales, purchases, expenses, products, customers, suppliers, today]);
 
   return (
     <div className="space-y-6 pb-20 lg:pb-6">
       <div>
-        <h1 className="text-2xl font-bold">لوحة التحكم</h1>
+        <h1 className="text-2xl font-bold">حديد القصبي</h1>
         <p className="text-muted-foreground">نظرة عامة على العمليات اليومية</p>
       </div>
 
@@ -59,8 +59,7 @@ export default function Dashboard() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-success" />
-                المبيعات
+                <TrendingUp className="h-4 w-4 text-success" />المبيعات
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -68,36 +67,30 @@ export default function Dashboard() {
               <p className="text-xs text-muted-foreground">{stats.salesCountToday} عملية</p>
             </CardContent>
           </Card>
-
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <ShoppingCart className="h-4 w-4 text-primary" />
-                المشتريات
+                <ShoppingCart className="h-4 w-4 text-primary" />المشتريات
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-xl font-bold text-primary">{formatCurrency(stats.todayPurchases)}</p>
             </CardContent>
           </Card>
-
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <Wallet className="h-4 w-4 text-warning" />
-                المصروفات
+                <Wallet className="h-4 w-4 text-warning" />المصروفات
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-xl font-bold text-warning">{formatCurrency(stats.todayExpenses)}</p>
             </CardContent>
           </Card>
-
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <DollarSign className="h-4 w-4" />
-                صافي الربح
+                <DollarSign className="h-4 w-4" />صافي الربح
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -109,45 +102,55 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Debts */}
+      <div>
+        <h2 className="text-lg font-semibold mb-3">الحسابات</h2>
+        <div className="grid grid-cols-2 gap-3">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <Users className="h-4 w-4 text-destructive" />ديون العملاء
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-xl font-bold text-destructive">{formatCurrency(stats.totalCustomerDebts)}</p>
+              <p className="text-xs text-muted-foreground">{stats.customersCount} عميل</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                <Truck className="h-4 w-4 text-warning" />مستحقات الموردين
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-xl font-bold text-warning">{formatCurrency(stats.totalSupplierDebts)}</p>
+              <p className="text-xs text-muted-foreground">{stats.suppliersCount} مورد</p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
       {/* Overall Stats */}
       <div>
         <h2 className="text-lg font-semibold mb-3">الإجمالي الكلي</h2>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">إجمالي المبيعات</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-xl font-bold text-success">{formatCurrency(stats.totalSales)}</p>
-            </CardContent>
+            <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">إجمالي المبيعات</CardTitle></CardHeader>
+            <CardContent><p className="text-xl font-bold text-success">{formatCurrency(stats.totalSales)}</p></CardContent>
           </Card>
-
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">إجمالي المشتريات</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-xl font-bold text-primary">{formatCurrency(stats.totalPurchases)}</p>
-            </CardContent>
+            <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">إجمالي المشتريات</CardTitle></CardHeader>
+            <CardContent><p className="text-xl font-bold text-primary">{formatCurrency(stats.totalPurchases)}</p></CardContent>
           </Card>
-
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">إجمالي المصروفات</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-xl font-bold text-warning">{formatCurrency(stats.totalExpenses)}</p>
-            </CardContent>
+            <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">إجمالي المصروفات</CardTitle></CardHeader>
+            <CardContent><p className="text-xl font-bold text-warning">{formatCurrency(stats.totalExpenses)}</p></CardContent>
           </Card>
-
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">صافي الربح الكلي</CardTitle>
-            </CardHeader>
+            <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">صافي الربح الكلي</CardTitle></CardHeader>
             <CardContent>
-              <p className={`text-xl font-bold ${stats.totalProfit >= 0 ? 'text-success' : 'text-destructive'}`}>
-                {formatCurrency(stats.totalProfit)}
-              </p>
+              <p className={`text-xl font-bold ${stats.totalProfit >= 0 ? 'text-success' : 'text-destructive'}`}>{formatCurrency(stats.totalProfit)}</p>
             </CardContent>
           </Card>
         </div>
@@ -159,35 +162,19 @@ export default function Dashboard() {
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <Package className="h-4 w-4" />
-                عدد المنتجات
-              </CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Package className="h-4 w-4" />عدد المنتجات</CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-xl font-bold">{stats.productsCount}</p>
-            </CardContent>
+            <CardContent><p className="text-xl font-bold">{stats.productsCount}</p></CardContent>
           </Card>
-
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <TrendingDown className="h-4 w-4 text-destructive" />
-                منتجات على وشك النفاد
-              </CardTitle>
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2"><TrendingDown className="h-4 w-4 text-destructive" />على وشك النفاد</CardTitle>
             </CardHeader>
-            <CardContent>
-              <p className="text-xl font-bold text-destructive">{stats.lowStockCount}</p>
-            </CardContent>
+            <CardContent><p className="text-xl font-bold text-destructive">{stats.lowStockCount}</p></CardContent>
           </Card>
-
           <Card className="col-span-2 lg:col-span-1">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">قيمة المخزون</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-xl font-bold">{formatCurrency(stats.inventoryValue)}</p>
-            </CardContent>
+            <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">قيمة المخزون</CardTitle></CardHeader>
+            <CardContent><p className="text-xl font-bold">{formatCurrency(stats.inventoryValue)}</p></CardContent>
           </Card>
         </div>
       </div>

@@ -4,48 +4,30 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from '@/components/ui/dialog';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { usePurchases, useProducts, generateId, formatCurrency, formatDate } from '@/hooks/useAccounting';
+import { usePurchases, useProducts, useSuppliers, generateId, formatCurrency, formatDate } from '@/hooks/useAccounting';
 import { Purchase } from '@/types/accounting';
 
 export default function Purchases() {
   const [purchases, setPurchases] = usePurchases();
   const [products, setProducts] = useProducts();
+  const [suppliers, setSuppliers] = useSuppliers();
   const [search, setSearch] = useState('');
   const [dateFilter, setDateFilter] = useState(formatDate(new Date()));
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
-    productId: '',
-    quantity: '',
-    unitPrice: '',
-    supplier: '',
-    notes: '',
-    date: formatDate(new Date()),
+    productId: '', quantity: '', unitPrice: '', supplier: '', notes: '',
+    date: formatDate(new Date()), paymentType: 'cash' as 'cash' | 'credit', supplierId: '',
   });
 
   const selectedProduct = products.find(p => p.id === formData.productId);
@@ -69,31 +51,18 @@ export default function Purchases() {
   }, [purchases]);
 
   const resetForm = () => {
-    setFormData({
-      productId: '',
-      quantity: '',
-      unitPrice: '',
-      supplier: '',
-      notes: '',
-      date: formatDate(new Date()),
-    });
+    setFormData({ productId: '', quantity: '', unitPrice: '', supplier: '', notes: '', date: formatDate(new Date()), paymentType: 'cash', supplierId: '' });
   };
 
   const handleProductSelect = (productId: string) => {
     const product = products.find(p => p.id === productId);
-    setFormData({
-      ...formData,
-      productId,
-      unitPrice: product?.buyPrice.toString() || '',
-    });
+    setFormData({ ...formData, productId, unitPrice: product?.buyPrice.toString() || '' });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.productId || !formData.quantity || !formData.unitPrice) {
-      return;
-    }
+    if (!formData.productId || !formData.quantity || !formData.unitPrice) return;
+    if (formData.paymentType === 'credit' && !formData.supplierId) return;
 
     const product = products.find(p => p.id === formData.productId);
     if (!product) return;
@@ -101,27 +70,21 @@ export default function Purchases() {
     const quantity = parseFloat(formData.quantity);
     const unitPrice = parseFloat(formData.unitPrice);
     const totalPrice = quantity * unitPrice;
+    const supplier = suppliers.find(s => s.id === formData.supplierId);
 
     const purchase: Purchase = {
-      id: generateId(),
-      productId: formData.productId,
-      productName: product.name,
-      quantity,
-      unitPrice,
-      totalPrice,
-      date: formData.date,
-      supplier: formData.supplier,
-      notes: formData.notes,
+      id: generateId(), productId: formData.productId, productName: product.name,
+      quantity, unitPrice, totalPrice, date: formData.date,
+      supplier: supplier?.name || formData.supplier, supplierId: formData.supplierId || undefined,
+      notes: formData.notes, paymentType: formData.paymentType,
     };
 
     setPurchases([...purchases, purchase]);
+    setProducts(products.map(p => p.id === formData.productId ? { ...p, stock: p.stock + quantity, buyPrice: unitPrice } : p));
 
-    // Update product stock and buy price
-    setProducts(products.map(p =>
-      p.id === formData.productId
-        ? { ...p, stock: p.stock + quantity, buyPrice: unitPrice }
-        : p
-    ));
+    if (formData.paymentType === 'credit' && supplier) {
+      setSuppliers(suppliers.map(s => s.id === supplier.id ? { ...s, totalDebt: s.totalDebt + totalPrice } : s));
+    }
 
     setIsDialogOpen(false);
     resetForm();
@@ -129,12 +92,10 @@ export default function Purchases() {
 
   const handleDelete = (purchase: Purchase) => {
     setPurchases(purchases.filter(p => p.id !== purchase.id));
-    // Remove stock
-    setProducts(products.map(p =>
-      p.id === purchase.productId
-        ? { ...p, stock: Math.max(0, p.stock - purchase.quantity) }
-        : p
-    ));
+    setProducts(products.map(p => p.id === purchase.productId ? { ...p, stock: Math.max(0, p.stock - purchase.quantity) } : p));
+    if (purchase.paymentType === 'credit' && purchase.supplierId) {
+      setSuppliers(suppliers.map(s => s.id === purchase.supplierId ? { ...s, totalDebt: s.totalDebt - purchase.totalPrice } : s));
+    }
   };
 
   return (
@@ -146,28 +107,17 @@ export default function Purchases() {
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={resetForm}>
-              <Plus className="h-4 w-4 ml-2" />
-              شراء جديد
-            </Button>
+            <Button onClick={resetForm}><Plus className="h-4 w-4 ml-2" />شراء جديد</Button>
           </DialogTrigger>
           <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>تسجيل عملية شراء</DialogTitle>
-            </DialogHeader>
+            <DialogHeader><DialogTitle>تسجيل عملية شراء</DialogTitle></DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label>المنتج</Label>
                 <Select value={formData.productId} onValueChange={handleProductSelect}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="اختر المنتج" />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="اختر المنتج" /></SelectTrigger>
                   <SelectContent>
-                    {products.map(p => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.name}
-                      </SelectItem>
-                    ))}
+                    {products.map(p => (<SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>))}
                   </SelectContent>
                 </Select>
               </div>
@@ -175,70 +125,61 @@ export default function Purchases() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label htmlFor="quantity">الكمية (بالوحدة)</Label>
-                  <Input
-                    id="quantity"
-                    type="number"
-                    step="0.01"
-                    min="0.01"
-                    value={formData.quantity}
-                    onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-                    placeholder="0"
-                    required
-                  />
+                  <Input id="quantity" type="number" step="0.01" min="0.01" value={formData.quantity}
+                    onChange={e => setFormData({ ...formData, quantity: e.target.value })} placeholder="0" required />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="unitPrice">سعر الوحدة</Label>
-                  <Input
-                    id="unitPrice"
-                    type="number"
-                    step="0.01"
-                    value={formData.unitPrice}
-                    onChange={(e) => setFormData({ ...formData, unitPrice: e.target.value })}
-                    placeholder="0.00"
-                    required
-                  />
+                  <Input id="unitPrice" type="number" step="0.01" value={formData.unitPrice}
+                    onChange={e => setFormData({ ...formData, unitPrice: e.target.value })} placeholder="0.00" required />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="supplier">المورد</Label>
-                <Input
-                  id="supplier"
-                  value={formData.supplier}
-                  onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
-                  placeholder="اسم المورد (اختياري)"
-                />
+                <Label>طريقة الدفع</Label>
+                <Select value={formData.paymentType} onValueChange={(v: 'cash' | 'credit') => setFormData({ ...formData, paymentType: v, supplierId: v === 'cash' ? '' : formData.supplierId })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cash">كاش (نقدي)</SelectItem>
+                    <SelectItem value="credit">آجل (على الحساب)</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+
+              {formData.paymentType === 'credit' ? (
+                <div className="space-y-2">
+                  <Label>المورد</Label>
+                  <Select value={formData.supplierId} onValueChange={v => setFormData({ ...formData, supplierId: v })}>
+                    <SelectTrigger><SelectValue placeholder="اختر المورد" /></SelectTrigger>
+                    <SelectContent>
+                      {suppliers.map(s => (
+                        <SelectItem key={s.id} value={s.id}>{s.name} (مستحق: {formatCurrency(s.totalDebt)})</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="supplier">المورد (اختياري)</Label>
+                  <Input id="supplier" value={formData.supplier} onChange={e => setFormData({ ...formData, supplier: e.target.value })} placeholder="اسم المورد" />
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="date">التاريخ</Label>
-                <Input
-                  id="date"
-                  type="date"
-                  value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                  required
-                />
+                <Input id="date" type="date" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} required />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="notes">ملاحظات</Label>
-                <Textarea
-                  id="notes"
-                  value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  placeholder="ملاحظات إضافية (اختياري)"
-                  rows={2}
-                />
+                <Textarea id="notes" value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })} placeholder="اختياري" rows={2} />
               </div>
 
               {formData.quantity && formData.unitPrice && (
                 <div className="p-3 bg-muted rounded-lg text-sm">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">الإجمالي:</span>
-                    <span className="font-semibold">
-                      {formatCurrency(parseFloat(formData.quantity) * parseFloat(formData.unitPrice))}
-                    </span>
+                    <span className="font-semibold">{formatCurrency(parseFloat(formData.quantity) * parseFloat(formData.unitPrice))}</span>
                   </div>
                 </div>
               )}
@@ -251,7 +192,6 @@ export default function Purchases() {
         </Dialog>
       </div>
 
-      {/* Today's Summary */}
       <div className="grid grid-cols-2 gap-3">
         <Card className="bg-primary/10 border-primary/20">
           <CardContent className="p-3 text-center">
@@ -267,26 +207,14 @@ export default function Purchases() {
         </Card>
       </div>
 
-      {/* Filters */}
       <div className="flex gap-3">
         <div className="relative flex-1">
           <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            className="pr-10"
-            placeholder="بحث..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+          <Input className="pr-10" placeholder="بحث..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
-        <Input
-          type="date"
-          value={dateFilter}
-          onChange={(e) => setDateFilter(e.target.value)}
-          className="w-auto"
-        />
+        <Input type="date" value={dateFilter} onChange={e => setDateFilter(e.target.value)} className="w-auto" />
       </div>
 
-      {/* Purchases List */}
       {filteredPurchases.length === 0 ? (
         <Card className="text-center py-12">
           <CardContent>
@@ -296,57 +224,38 @@ export default function Purchases() {
         </Card>
       ) : (
         <div className="space-y-3">
-          {filteredPurchases.map((purchase) => (
+          {filteredPurchases.map(purchase => (
             <Card key={purchase.id}>
               <CardContent className="p-4">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    <h3 className="font-semibold">{purchase.productName}</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold">{purchase.productName}</h3>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${purchase.paymentType === 'credit' ? 'bg-warning/10 text-warning' : 'bg-success/10 text-success'}`}>
+                        {purchase.paymentType === 'credit' ? 'آجل' : 'كاش'}
+                      </span>
+                    </div>
                     <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-sm">
-                      <span className="text-muted-foreground">
-                        الكمية: <span className="text-foreground">{purchase.quantity}</span>
-                      </span>
-                      <span className="text-muted-foreground">
-                        السعر: <span className="text-foreground">{formatCurrency(purchase.unitPrice)}</span>
-                      </span>
+                      <span className="text-muted-foreground">الكمية: <span className="text-foreground">{purchase.quantity}</span></span>
+                      <span className="text-muted-foreground">السعر: <span className="text-foreground">{formatCurrency(purchase.unitPrice)}</span></span>
                     </div>
-                    <div className="mt-2">
-                      <span className="text-sm font-semibold">
-                        الإجمالي: {formatCurrency(purchase.totalPrice)}
-                      </span>
-                    </div>
-                    {purchase.supplier && (
-                      <p className="text-sm text-muted-foreground mt-1">المورد: {purchase.supplier}</p>
-                    )}
-                    <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-                      <Calendar className="h-3 w-3" />
-                      {purchase.date}
-                    </div>
-                    {purchase.notes && (
-                      <p className="text-sm text-muted-foreground mt-2">{purchase.notes}</p>
-                    )}
+                    <div className="mt-2"><span className="text-sm font-semibold">الإجمالي: {formatCurrency(purchase.totalPrice)}</span></div>
+                    {purchase.supplier && <p className="text-sm text-muted-foreground mt-1">المورد: {purchase.supplier}</p>}
+                    <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground"><Calendar className="h-3 w-3" />{purchase.date}</div>
+                    {purchase.notes && <p className="text-sm text-muted-foreground mt-2">{purchase.notes}</p>}
                   </div>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button variant="ghost" size="icon" className="text-destructive">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <Button variant="ghost" size="icon" className="text-destructive"><Trash2 className="h-4 w-4" /></Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
                         <AlertDialogTitle>حذف عملية الشراء</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          هل أنت متأكد؟ سيتم خصم الكمية من المخزون.
-                        </AlertDialogDescription>
+                        <AlertDialogDescription>هل أنت متأكد؟ سيتم خصم الكمية من المخزون.</AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter className="gap-2">
                         <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                        <AlertDialogAction
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          onClick={() => handleDelete(purchase)}
-                        >
-                          حذف
-                        </AlertDialogAction>
+                        <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => handleDelete(purchase)}>حذف</AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
