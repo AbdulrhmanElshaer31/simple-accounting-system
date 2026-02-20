@@ -98,7 +98,7 @@ export default function Purchases() {
     const product = products.find(p => p.id === formData.productId);
     if (!product) return;
 
-    const quantity = parseInt(formData.quantity);
+    const quantity = parseFloat(formData.quantity);
     const unitPrice = parseFloat(formData.unitPrice);
     const totalPrice = quantity * unitPrice;
 
@@ -174,11 +174,12 @@ export default function Purchases() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label htmlFor="quantity">الكمية</Label>
+                  <Label htmlFor="quantity">الكمية (بالوحدة)</Label>
                   <Input
                     id="quantity"
                     type="number"
-                    min="1"
+                    step="0.01"
+                    min="0.01"
                     value={formData.quantity}
                     onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
                     placeholder="0"
