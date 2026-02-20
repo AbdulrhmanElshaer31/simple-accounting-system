@@ -35,7 +35,7 @@ export default function Products() {
     buyPrice: '',
     sellPrice: '',
     stock: '',
-    unit: 'قطعة',
+    unit: 'كيلو',
   });
 
   const filteredProducts = products.filter(p =>
@@ -43,7 +43,7 @@ export default function Products() {
   );
 
   const resetForm = () => {
-    setFormData({ name: '', buyPrice: '', sellPrice: '', stock: '', unit: 'قطعة' });
+    setFormData({ name: '', buyPrice: '', sellPrice: '', stock: '', unit: 'كيلو' });
     setEditingProduct(null);
   };
 
@@ -75,7 +75,7 @@ export default function Products() {
       name: formData.name.trim(),
       buyPrice: parseFloat(formData.buyPrice),
       sellPrice: parseFloat(formData.sellPrice),
-      stock: parseInt(formData.stock) || 0,
+      stock: parseFloat(formData.stock) || 0,
       unit: formData.unit,
       createdAt: editingProduct?.createdAt || formatDate(new Date()),
     };
@@ -130,7 +130,7 @@ export default function Products() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label htmlFor="buyPrice">سعر الشراء</Label>
+                  <Label htmlFor="buyPrice">سعر الشراء (للوحدة)</Label>
                   <Input
                     id="buyPrice"
                     type="number"
@@ -142,7 +142,7 @@ export default function Products() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="sellPrice">سعر البيع</Label>
+                  <Label htmlFor="sellPrice">سعر البيع (للوحدة)</Label>
                   <Input
                     id="sellPrice"
                     type="number"
@@ -160,6 +160,7 @@ export default function Products() {
                   <Input
                     id="stock"
                     type="number"
+                    step="0.01"
                     value={formData.stock}
                     onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
                     placeholder="0"
@@ -171,7 +172,7 @@ export default function Products() {
                     id="unit"
                     value={formData.unit}
                     onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                    placeholder="قطعة"
+                    placeholder="كيلو"
                   />
                 </div>
               </div>
